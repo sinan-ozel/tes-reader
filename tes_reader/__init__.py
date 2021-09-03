@@ -203,6 +203,9 @@ class Reader:
     def __len__(self):
         return len(self.records)
 
+    def __contains__(self, val):
+        return val in self.records or val in self.record_types
+
     @property
     def pos(self):
         return self._file.tell()

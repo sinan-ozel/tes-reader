@@ -16,9 +16,14 @@ class NPC(Record):
     def __init__(self, record):
         self._pointer = record._pointer
         self._header = record._header
-        self.content = record._content
+        self._content = record.content
 
     @property
     def is_female(self):
         return self._get_bit(self['ACBS'], 0)
 
+class Book(Record):
+    def __init__(self, record):
+        self._pointer = record._pointer
+        self._header = record._header
+        self._content = record.content
