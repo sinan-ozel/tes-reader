@@ -1,2 +1,5 @@
 **/__pycache__
 tests/test.ini
+*.egg-info/
+dist/
+.pytest_cache/
