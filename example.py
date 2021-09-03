@@ -2,7 +2,7 @@ import os
 from tes_reader import Reader
 from tes_reader.record_types import NPC
 
-game_folder = 'S:\\Steam\\steamapps\\common\\Enderal\\'
+game_folder = 'S:\\Steam\\steamapps\\common\\Skyrim Special Edition\\'
 
 with Reader(os.path.join(game_folder, 'Data', 'Skyrim.esm')) as skyrim_main_file:
 
