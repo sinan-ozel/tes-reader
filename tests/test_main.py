@@ -2,12 +2,13 @@ import pytest
 import os
 from configparser import ConfigParser
 from tes_reader import Reader
+from tes_reader.record_types import Race, NPC
 
 config = ConfigParser()
 config.read('test.ini')
 
-test_filename = os.path.join(config['ESM']['Folder'], 
-                             'Data', 
+test_filename = os.path.join(config['ESM']['Folder'],
+                             'Data',
                              config['ESM']['File'])
 
 def test_open_file():

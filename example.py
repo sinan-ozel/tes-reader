@@ -32,9 +32,9 @@ with Reader(os.path.join(game_folder, 'Data', 'Skyrim.esm')) as skyrim_main_file
         print(hex(book_record.form_id), {field.type for field in book_record})
         # Output: {'CNAM', 'INTV', 'HEDR', 'GRUP'}
 
-    # Inspect the GRUP record of the book form ID 0x14330f
-    form_id = 0x14330f
+    # Inspect the GRUP record of the book form ID 0x1acc7
+    form_id = 0x1acc7
     skyrim_main_file.load_record_content(form_id)  # You can load the record contents using the Form ID
     book_record = skyrim_main_file[form_id]  # You can access a record by its Form ID.
     print(book_record['GRUP'])  # Hexadecimal output with four-letter Record types.
-        
+
