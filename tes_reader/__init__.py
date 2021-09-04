@@ -12,7 +12,7 @@ Usage Example - Print Form IDs of all top-level NPC records in Skyrim.esm
 
 Credits: This code is mainly written from the YouTube stream found at https://www.youtube.com/watch?v=w5TLMn5l0g0
 """
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 __author__ = 'Sinan Ozel'
 
 import os
@@ -61,7 +61,7 @@ class Record:
 
     def __str__(self):
         return f'{self.type} record at position {self._pointer}, Form ID: {self.form_id}'
-    
+
     def __setattr__(self, name, value):
         if name == 'content':
             self.set_content(value)
@@ -91,7 +91,10 @@ class Record:
 
     @property
     def type(self):
-        return self._header[0:4].decode('utf-8')
+        try:
+            return self._header[0:4].decode('utf-8')
+        except UnicodeDecodeError:
+            return self._header[0:4]
 
     @property
     def is_compressed(self):
@@ -112,7 +115,7 @@ class Record:
     @property
     def size(self):
         return int.from_bytes(self._header[4:8], 'little', signed=False)
-        
+
     @property
     def version(self):
         return int.from_bytes(self.buffer[20:22], 'little', signed=False)
