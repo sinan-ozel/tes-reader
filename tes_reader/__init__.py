@@ -146,7 +146,7 @@ class Record:
 
     @property
     def editor_id(self):
-        return self['EDID'].decode('utf-8')
+        return self['EDID'].decode('utf-8').strip('\0')
 
 
 class Reader:
