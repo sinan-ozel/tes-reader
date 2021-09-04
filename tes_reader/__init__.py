@@ -94,7 +94,7 @@ class Record:
         try:
             return self._header[0:4].decode('utf-8')
         except UnicodeDecodeError:
-            return self._header[0:4]
+            return self._header[0:4].decode('latin-1').strip('\0')
 
     @property
     def is_compressed(self):
