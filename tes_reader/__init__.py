@@ -76,10 +76,13 @@ class Record:
         else:
             self.__dict__[name] = value
 
-    def __getitem__(self, name: str) -> bytes:
-        for field in self:
-            if field.type == name:
-                return field._bytes
+    def __getitem__(self, key: Union[str, slice]) -> bytes:
+        if isinstance(key, slice):
+            return self.content[key]
+        if isinstance(key, key):
+            for field in self:
+                if field.type == key:
+                    return field._bytes
 
     def __iter__(self):
         content = self.content
