@@ -7,7 +7,7 @@ Usage Example - Print Form IDs of all top-level NPC records in Skyrim.esm
 
     with Reader(os.path.join(game_folder, 'Data', 'Skyrim.esm')) as skyrim_main_file:
         for npc in skyrim_main_file['NPC_']:
-            print(hex(npc.form_id))
+            print(npc.form_id)
 
 
 Credits: This code is mainly written from the YouTube stream found at https://www.youtube.com/watch?v=w5TLMn5l0g0
@@ -79,7 +79,7 @@ class Record:
     def __getitem__(self, key: Union[str, slice]) -> bytes:
         if isinstance(key, slice):
             return self.content[key]
-        if isinstance(key, key):
+        if isinstance(key, str):
             for field in self:
                 if field.type == key:
                     return field._bytes
@@ -173,7 +173,7 @@ class Reader:
         print(skyrim_main_file.record_types)  # print types of records in file.
 
         for npc in skyrim_main_file['NPC_']:
-            print(hex(npc.form_id))  # Print form IDs of all NPCs.
+            print(npc.form_id)  # Print form IDs of all NPCs.
 
         print(skyrim_main_file[0x1033ee])  # Return the record with the form ID 0x1033ee
     """
@@ -204,10 +204,12 @@ class Reader:
         elif isinstance(key, int):
             return self.records[key]
         elif isinstance(key, Record):
-            return self.records[key.form_id]
+            return self.records[int(key.form_id, 16)]
         elif isinstance(key, str):
             if len(key) == 4:
                 return [record for record in self.records.values() if record.type == key]
+            elif key[:2] == '0x':
+                return self.records[int(key, 16)]
         else:
             raise KeyError
 
@@ -256,19 +258,17 @@ class Reader:
         if not isinstance(record, Record):
             record = self.records[record]
         try:
-            return record.content
+            return self[record].content
         except AttributeError:
             self.load_record_content(record)
-            return record.content
+            return self[record].content
 
-    def load_record_content(self, record: Union[int, Record]):
-        if not isinstance(record, Record):
-            record = self.records[record]
-        if record.is_compressed:
-            content = self._read_bytes(record._pointer + record.header_size + 4, record.size)
+    def load_record_content(self, record: Union[str, int, Record]):
+        if self[record].is_compressed:
+            content = self._read_bytes(self[record]._pointer + self[record].header_size + 4, self[record].size)
             content = zlib.decompress(content, zlib.MAX_WBITS)
             record.set_content(content)
         else:
-            content = self._read_bytes(record.header_size, record.size)
-        self.records[record.form_id].content = content
+            content = self._read_bytes(self[record].header_size, self[record].size)
+        self[record].content = content
 

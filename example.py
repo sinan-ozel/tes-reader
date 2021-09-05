@@ -15,7 +15,7 @@ with Reader(os.path.join(game_folder, 'Data', 'Skyrim.esm')) as skyrim_main_file
 
     # List all of the Form ID (a.k.a. Base ID) for the NPC Records:
     for npc_record in skyrim_main_file['NPC_']:
-        print(hex(npc_record.form_id))
+        print(npc_record.form_id)
 
     # Load the full data for all NPC_ records and print their technical gender:
     for npc_record in skyrim_main_file['NPC_']:
@@ -29,7 +29,7 @@ with Reader(os.path.join(game_folder, 'Data', 'Skyrim.esm')) as skyrim_main_file
     for book_record in skyrim_main_file['BOOK']:
         # What types of fields do book records include?
         skyrim_main_file.load_record_content(book_record)
-        print(hex(book_record.form_id), {field.type for field in book_record})
+        print(book_record.form_id, {field.type for field in book_record})
         # Output: {'CNAM', 'INTV', 'HEDR', 'GRUP'}
 
     # Inspect the GRUP record of the book form ID 0x1acc7
