@@ -30,4 +30,4 @@ In addition to the requirements above, you will need a github.com account, and t
 
 Clone from github using `git clone git@github.com:sinan-ozel/tes-reader.git`
 
-To run the tests, you will need computer with Skyrim installed. Go into the `tests` folder. Set the configuration in the `test.ini` file to point to the Skyrim's executable folder (not the data folder). Finally, run the command `pytest -v`.
+To run the tests, you will need computer with Skyrim installed. Go into the `tests` folder. Set the configuration in the `test.ini` file to point to the Skyrim's executable folder (not the data folder). Finally, run the command `pytest -v`, while inside the `tests` folder.

@@ -11,14 +11,21 @@ Usage Example - Print Form IDs of all top-level NPC records in Skyrim.esm
 
 
 Credits: This code is mainly written from the YouTube stream found at https://www.youtube.com/watch?v=w5TLMn5l0g0
+and the explanation on the Wiki page: https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format
 """
 __version__ = '0.0.6'
 __author__ = 'Sinan Ozel'
 
+import re
 import os
 import zlib
 import struct
 from typing import Union, List
+
+# TODO: There is a faster way to check if all four characters are uppercase ASCII: AND against one particular bit.
+type_regular_expression = re.compile('[A-Z_0-9]{4}')
+def is_type(alleged_type_string: str):
+    return type_regular_expression.match(alleged_type_string)
 
 class Field:
     header_size = 6
@@ -49,6 +56,77 @@ class Field:
 
     def __len__(self):
         return self.header_size + self.size
+
+class Group:
+    header_size = 24
+
+    # See https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format for the full list.
+    # TODO: Add the remaining.
+    group_types = [
+        'Top',
+        'World Children',
+        'Interior Cell Block',
+        'Interior Cell Sub-Block',
+    ]
+
+    def __init__(self, pointer: int, header):
+        cls = self.__class__
+        if type(header) != bytes or len(header) != 24:
+            raise ValueError(f'To initialize a {cls.__name__} object, pass a {self.header_size}-byte value read from the position in the file.')
+        self._pointer = pointer
+        self._header = header
+        if self.type != 'GRUP':
+            raise TypeError(f'Not a GRUP. Type is: {self.type}')
+
+    def _get_all_records(self):
+        _pos = 0
+        print(self._header)
+        print(self.size)
+
+    @property
+    def size(self):
+        return int.from_bytes(self._header[4:8], 'little', signed=False)
+
+    @property
+    def type(self):
+        try:
+            return self._header[0:4].decode('utf-8')
+        except UnicodeDecodeError:
+            return self._header[0:4].decode('latin-1').strip('\0')
+
+    @property
+    def group_type(self):
+        return int.from_bytes(self._header[12:16], 'little', signed=False)
+
+    @property
+    def label(self):
+        if self.group_type == 0:
+            try:
+                return self._header[8:12].decode('utf-8')
+            except UnicodeDecodeError:
+                return self._header[8:12].decode('latin-1').strip('\0')
+        elif self.group_type in [1, 6, 7, 8, 9]:
+            return int.from_bytes(self._header[8:12], 'little', signed=False) # Form Id.
+
+    @property
+    def version(self):
+        return int.from_bytes(self.buffer[18:20], 'little', signed=False)
+
+    def set_content(self, content: bytes):
+        if not self.is_compressed:
+            assert len(content) == self.size
+        self._content = content
+
+    def get_content(self):
+        try:
+            return self._content
+        except AttributeError:
+            raise AttributeError('Record contents not loaded. Call set_content to set them.')
+
+    @property
+    def content(self):
+        return self.get_content()
+
 
 
 class Record:
@@ -109,6 +187,8 @@ class Record:
 
     @property
     def is_compressed(self):
+        if self.type == 'GRUP':
+            return False
         return self._get_flag(18)
 
     @property
@@ -128,12 +208,26 @@ class Record:
         return int.from_bytes(self._header[4:8], 'little', signed=False)
 
     @property
+    def label(self):
+        if self.type == 'GRUP':
+            return int.from_bytes(self._header[8:12], 'little', signed=False)
+
+    @property
     def version(self):
-        return int.from_bytes(self.buffer[20:22], 'little', signed=False)
+        if self.type == 'GRUP':
+            return int.from_bytes(self.buffer[18:20], 'little', signed=False)
+        else:
+            return int.from_bytes(self.buffer[20:22], 'little', signed=False)
 
     @property
     def form_id(self):
-        return int.from_bytes(self._header[12:16], 'little', signed=False)
+        if self.type != 'GRUP':
+            return hex(int.from_bytes(self._header[12:16], 'little', signed=False))
+
+    @property
+    def timestamp(self):
+        # TODO: Add formatting based on the Wiki page. Different in Skyrim SE and LE.
+        return int.from_bytes(self._header[16:18], 'little', signed=False)
 
     def set_content(self, content: bytes):
         # if hasattr(self, '_content'):
@@ -240,6 +334,32 @@ class Reader:
     def _read_record_header(self, pos):
         return self._read_bytes(pos, 24)
 
+    def _read_record_headers_in_group(self, starting_position, size):
+        _pos = starting_position
+        ending_position = starting_position + size
+        while _pos < ending_position:
+            try:
+                previous_record = record
+            except UnboundLocalError:
+                pass
+            record_header = self._read_record_header(_pos)
+            record = Record(_pos, record_header)
+            if record.type == 'GRUP':
+                group = Group(_pos, record_header)
+                self._read_record_headers_in_group(_pos + group.header_size, group.size - group.header_size)
+                _pos += group.size
+            else:
+                self.records[int(record.form_id, 16)] = record
+                if not is_type(record.type):
+                    print(f'Weird record type: {record.type}')
+                    print(f'Previous record: {previous_record}')
+                    break
+                _pos += record.header_size + record.size
+
+        if _pos != ending_position:
+            raise RuntimeError(f"Record Group of size {group.size} starting at {starting_position}, ending at {starting_position + group.size}, ended unexpectedly at position: {_pos}")
+
+
     def _read_all_record_headers(self):
         self.records = {}
         record_position = 0
@@ -251,12 +371,21 @@ class Reader:
                 if len(record_header) != 0:
                     raise RuntimeWarning(f"File ended unexpectedly at position: {record_position}")
                 break
-            self.records[record.form_id] = record
-            record_position += len(record)
+            if record.type == 'GRUP':
+                group = Group(record_position, record_header)
+                self._read_record_headers_in_group(record_position + group.header_size, group.size - group.header_size)
+                record_position += group.size
+            else:
+                try:
+                    self.records[int(record.form_id, 16)] = record
+                except ValueError:
+                    print(record)
+                    print(type(record.form_id))
+                    raise
+                # print(f'Read {len(self.records)} records so far. Position: {record_position}. {record.type}, compressed? {record.is_compressed}', end='\r')
+                record_position += record.header_size + record.size
 
-    def get_record_content(self, record: Union[int, Record]) -> bytes:
-        if not isinstance(record, Record):
-            record = self.records[record]
+    def get_record_content(self, record: Union[str, int, Record]) -> bytes:
         try:
             return self[record].content
         except AttributeError:
