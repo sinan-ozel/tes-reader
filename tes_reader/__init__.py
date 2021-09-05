@@ -26,9 +26,17 @@ class Field:
     def __init__(self, content: bytes):
         assert len(content) >= self.header_size
         self._pos = 0
-        self.type = content[0:4].decode('utf-8')
-        self.size = int.from_bytes(content[4:6], 'little', signed=False)
-        self._bytes = content[6:6 + self.size]
+        self.type = self.get_type_from_content(content)
+        self.size = self.get_size_from_content(content)
+        self._bytes = content[self.header_size:self.header_size + self.size]
+
+    @staticmethod
+    def get_type_from_content(content: bytes):
+        return content[0:4].decode('utf-8')
+
+    @staticmethod
+    def get_size_from_content(content: bytes):
+        return int.from_bytes(content[4:6], 'little', signed=False)
 
     def __str__(self):
         return self._bytes.decode('utf-8')
