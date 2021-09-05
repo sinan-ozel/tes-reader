@@ -78,11 +78,6 @@ class Group:
         if self.type != 'GRUP':
             raise TypeError(f'Not a GRUP. Type is: {self.type}')
 
-    def _get_all_records(self):
-        _pos = 0
-        print(self._header)
-        print(self.size)
-
     @property
     def size(self):
         return int.from_bytes(self._header[4:8], 'little', signed=False)
@@ -146,7 +141,7 @@ class Record:
         return f'Record(pointer={self._pointer}, header={self._header}'
 
     def __str__(self):
-        return f'{self.type} record at position {self._pointer}, Form ID: {self.form_id}'
+        return f'{self.type} record at position {self._pointer}, with size {self.size}, Form ID: {self.form_id}'
 
     def __setattr__(self, name, value):
         if name == 'content':
@@ -338,10 +333,6 @@ class Reader:
         _pos = starting_position
         ending_position = starting_position + size
         while _pos < ending_position:
-            try:
-                previous_record = record
-            except UnboundLocalError:
-                pass
             record_header = self._read_record_header(_pos)
             record = Record(_pos, record_header)
             if record.type == 'GRUP':
@@ -352,7 +343,6 @@ class Reader:
                 self.records[int(record.form_id, 16)] = record
                 if not is_type(record.type):
                     print(f'Weird record type: {record.type}')
-                    print(f'Previous record: {previous_record}')
                     break
                 _pos += record.header_size + record.size
 
@@ -376,13 +366,7 @@ class Reader:
                 self._read_record_headers_in_group(record_position + group.header_size, group.size - group.header_size)
                 record_position += group.size
             else:
-                try:
-                    self.records[int(record.form_id, 16)] = record
-                except ValueError:
-                    print(record)
-                    print(type(record.form_id))
-                    raise
-                # print(f'Read {len(self.records)} records so far. Position: {record_position}. {record.type}, compressed? {record.is_compressed}', end='\r')
+                self.records[int(record.form_id, 16)] = record
                 record_position += record.header_size + record.size
 
     def get_record_content(self, record: Union[str, int, Record]) -> bytes:
