@@ -13,7 +13,7 @@ Usage Example - Print Form IDs of all top-level NPC records in Skyrim.esm
 Credits: This code is mainly written from the YouTube stream found at https://www.youtube.com/watch?v=w5TLMn5l0g0
 and the explanation on the Wiki page: https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format
 """
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 __author__ = 'Sinan Ozel'
 
 import re
