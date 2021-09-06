@@ -196,7 +196,11 @@ class Record:
 
     @staticmethod
     def _get_bit(longword: bytes, bit: int):
-        return bool(int.from_bytes(longword, 'little', signed=False) & 2 ** bit)
+        try:
+            return bool(int.from_bytes(longword, 'little', signed=False) & 2 ** bit)
+        except TypeError:
+            if longword is None:
+                return None
 
     @property
     def size(self):
