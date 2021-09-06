@@ -11,7 +11,7 @@ with Reader(os.path.join(game_folder, 'Data', 'Skyrim.esm')) as skyrim_main_file
     print(len(skyrim_main_file['BOOK']))
 ```
 
-See [example.py](example.py) for more examples.
+See [example.py](https://github.com/sinan-ozel/tes-reader/blob/main/example.py) for more examples.
 
 ## Installation
 
