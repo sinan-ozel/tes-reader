@@ -21,15 +21,16 @@ with Reader(os.path.join(game_folder, 'Data', 'Skyrim.esm')) as skyrim_main_file
     for npc_record in skyrim_main_file['NPC_']:
         skyrim_main_file.load_record_content(npc_record)
         npc = NPC(npc_record)
-        print('Form ID:', npc.editor_id,
-              'Editor ID:', npc.editor_id,
-              'Technical Gender:', 'F' if npc.is_female else 'M')
+        print('Form ID:', npc.form_id,
+              '\tEssential?', npc.is_essential,
+              '\tTechnical Gender:', lambda x: {True: 'F', False: 'M', None: 'No Gender (Should have base)'}[npc.is_female],
+              '\tEditor ID:', npc.editor_id)
 
     # Inpect book records:
     for book_record in skyrim_main_file['BOOK']:
         # What types of fields do book records include?
         skyrim_main_file.load_record_content(book_record)
-        print(book_record.form_id, {field.type for field in book_record})
+        print(book_record.form_id, {field.name for field in book_record})
         # Output: {'CNAM', 'INTV', 'HEDR', 'GRUP'}
 
     # Inspect the GRUP record of the book form ID 0x1acc7

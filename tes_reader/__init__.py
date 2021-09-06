@@ -27,18 +27,33 @@ type_regular_expression = re.compile('[A-Z_0-9]{4}')
 def is_type(alleged_type_string: str):
     return type_regular_expression.match(alleged_type_string)
 
+def debug_record_attribute(func):
+    """Decorator to print debugging information about the record."""
+    def func_with_debug(self, *args, **kwargs):
+        try:
+            result = func(self, *args, **kwargs)
+        except Exception:
+            print(self.type)
+            print(self._content)
+            print([field.name for field in self.fields])
+            raise
+
+        return result
+    return func_with_debug
+
+
 class Field:
     header_size = 6
 
     def __init__(self, content: bytes):
         assert len(content) >= self.header_size
         self._pos = 0
-        self.type = self.get_type_from_content(content)
+        self.name = self.get_name_from_content(content)
         self.size = self.get_size_from_content(content)
         self._bytes = content[self.header_size:self.header_size + self.size]
 
     @staticmethod
-    def get_type_from_content(content: bytes):
+    def get_name_from_content(content: bytes):
         return content[0:4].decode('utf-8')
 
     @staticmethod
@@ -107,20 +122,10 @@ class Group:
     def version(self):
         return int.from_bytes(self.buffer[18:20], 'little', signed=False)
 
-    def set_content(self, content: bytes):
-        if not self.is_compressed:
-            assert len(content) == self.size
-        self._content = content
-
-    def get_content(self):
-        try:
-            return self._content
-        except AttributeError:
-            raise AttributeError('Record contents not loaded. Call set_content to set them.')
-
     @property
-    def content(self):
-        return self.get_content()
+    def pointer(self):
+        return self._pointer
+
 
 
 
@@ -154,24 +159,62 @@ class Record:
             return self.content[key]
         if isinstance(key, str):
             for field in self:
-                if field.type == key:
+                if field.name == key:
                     return field._bytes
 
+    def _parse_subrecords_in_group(self, group):
+        starting_position = group.pointer + group.header_size
+        ending_position = starting_position + group.size - group.header_size
+        _pos = starting_position
+        print("Parsing subrecords.")
+        while _pos < ending_position:
+            record_header = self.content[_pos:_pos + Record.header_size]
+            record = Record(_pos, record_header)
+            if record.type == 'GRUP':
+                subgroup = Group(_pos, record_header)
+                self._parse_subrecords_in_group(subgroup)
+                _pos += subgroup.size
+            else:
+                self.fie[int(record.form_id, 16)] = record
+                if not is_type(record.type):
+                    print(f'Weird record type: {record.type}')
+                    break
+                _pos += record.header_size + record.size
+
+        if _pos != ending_position:
+            raise RuntimeError(f"Record Group of size {group.size} starting at {starting_position}, ending at {starting_position + group.size}, ended unexpectedly at position: {_pos}")
+
+    def _parse_contents(self, starting_position=0, ending_position=None):
+        self._field_pointers = []
+        self._field_sizes = []
+        self.subrecords = {}
+        if ending_position is None:
+            ending_position = self.size
+        _pos = starting_position
+        self.fields = []
+        while _pos < ending_position:
+            field = Field(self.content[_pos:])
+            if field.name == 'GRUP':
+                group_header = self.content[_pos:_pos + Group.header_size]
+                group = Group(_pos, group_header)
+                self._parse_subrecords_in_group(group)
+                _pos += group.size
+            else:
+                self._field_pointers += [_pos]
+                self._field_sizes += [Field.header_size + Field.get_size_from_content(self.content[_pos:_pos + 6])]
+                self.fields += [field]
+                _pos += field.header_size + field.size
+
     def __iter__(self):
-        content = self.content
-        while True:
-            try:
-                field = Field(content)
-            except AssertionError:
-                if len(content) != 0:
-                    raise RuntimeWarning(f'Record unexpectedly ended.')
-                break
-            content = content[len(field):]
-            yield field
+        if not hasattr(self, '_field_pointers'):
+            self._parse_contents()
+        for i, _pos in enumerate(self._field_pointers):
+            field_size = self._field_sizes[i]
+            yield Field(self.content[_pos:_pos + field_size])
 
     @property
     def field_types(self):
-        return {field.type for field in self}
+        return {field.name for field in self}
 
     @property
     def type(self):
@@ -386,6 +429,6 @@ class Reader:
             content = zlib.decompress(content, zlib.MAX_WBITS)
             record.set_content(content)
         else:
-            content = self._read_bytes(self[record].header_size, self[record].size)
+            content = self._read_bytes(self[record]._pointer + self[record].header_size, self[record].size)
         self[record].content = content
 

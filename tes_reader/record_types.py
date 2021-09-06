@@ -1,4 +1,4 @@
-from . import Record
+from . import Record, debug_record_attribute
 
 class NPC(Record):
     def __init__(self, record):
@@ -7,10 +7,12 @@ class NPC(Record):
         self._content = record.content
 
     @property
+    @debug_record_attribute
     def is_female(self):
         return self._get_bit(self['ACBS'], 0)
 
     @property
+    @debug_record_attribute
     def is_essential(self):
         return self._get_bit(self['ACBS'], 1)
 
