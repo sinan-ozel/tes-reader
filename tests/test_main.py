@@ -8,7 +8,7 @@ from tes_reader import is_type
 config = ConfigParser()
 config.read('test.ini')
 
-test_filename = os.path.join(config['ESM']['Folder'],
+test_filename = os.path.join(config['Skyrim']['Folder'],
                              'Data',
                              config['ESM']['File'])
 
