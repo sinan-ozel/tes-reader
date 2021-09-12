@@ -297,7 +297,17 @@ class Record:
 
 
 class Reader:
-    """Parse a TES4 file.
+    def __init__(self, file_path):
+        if not os.path.exists(file_path):
+            raise FileNotFoundError
+        self.file_path = file_path
+
+    def _read_bytes(self, pos: int, length: int) -> bytes:
+        self._file.seek(pos)
+        return self._file.read(length)
+
+class ElderScrollsFileReader(Reader):
+    """Parse a ESM/P or ESS file.
 
     Usage examples:
 
@@ -313,11 +323,6 @@ class Reader:
 
         print(skyrim_main_file[0x1033ee])  # Return the record with the form ID 0x1033ee
     """
-
-    def __init__(self, file_path):
-        if not os.path.exists(file_path):
-            raise FileNotFoundError
-        self.file_path = file_path
 
     def __enter__(self):
         self._file = open(self.file_path, 'rb')
@@ -368,10 +373,6 @@ class Reader:
 
     def _reset(self):
         self._file.seek(0)
-
-    def _read_bytes(self, pos: int, length: int) -> bytes:
-        self._file.seek(pos)
-        return self._file.read(length)
 
     def _read_record_header(self, pos):
         return self._read_bytes(pos, 24)
