@@ -19,15 +19,16 @@ See [example.py](https://github.com/sinan-ozel/tes-reader/blob/main/example.py) 
 pip install tes-reader
 ```
 ## Requirements
-* Python 3.5
+* Python 3.5+
 * pip (Package manager for Python)
 * Windows
 * An Elder Scrolls Game - for example, Skyrim.
 
 ## Development and Testing
 
-In addition to the requirements above, you will need a github.com account, and the `pytest` package, installed with `pip install pytest`
-
 Clone from github using `git clone git@github.com:sinan-ozel/tes-reader.git`
+
+Install the requirements for development using the command `pip install -r requirements/dev.txt`. I personally prefer
+using a virtualenv to keep modules organized.
 
 To run the tests, you will need computer with Skyrim installed. Go into the `tests` folder. Set the configuration in the `test.ini` file to point to the Skyrim's executable folder (not the data folder). Finally, run the command `pytest -v`, while inside the `tests` folder.
