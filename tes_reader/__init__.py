@@ -433,3 +433,35 @@ class ElderScrollsFileReader(Reader):
             content = self._read_bytes(self[record]._pointer + self[record].header_size, self[record].size)
         self[record].content = content
 
+
+
+class BethesdaSoftwareArchiveReader(Reader):
+    """Parse a v104/105 (Skyrim) BSA File."""
+    def __enter__(self):
+        self._file = open(self.file_path, 'rb')
+        try:
+            assert self._read_bytes(0, 4) == b'BSA\x00'
+        except AssertionError:
+            raise RuntimeError('Incorrect file header - is this a BSA file?')
+        # TODO: Read all folders
+        # TODO: Read all filenames
+        # TODO: Add __len__
+        # TODO: Add __contains__
+        return self
+
+    def __exit__(self, exception_type, exception_val, trace):
+        self._file.close()
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            if key.step is not None:
+                raise KeyError(f'{self.__class__.__name__} does not allow slicing '
+                                'with a step. Use only one colon in slice, for example: [0:4]')
+            return self._read_bytes(key.start, key.stop - key.start)
+        # TODO: Add string keys to refer to specific filenames.
+        else:
+            raise KeyError
+
+    @property
+    def version(self):
+        return int.from_bytes(self[4:8], 'little', signed=False)
