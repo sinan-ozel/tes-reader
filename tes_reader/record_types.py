@@ -1,3 +1,4 @@
+import struct
 from . import Record, debug_record_attribute
 
 class NPC(Record):
@@ -5,6 +6,13 @@ class NPC(Record):
         self._pointer = record._pointer
         self._header = record._header
         self._content = record.content
+
+    @property
+    def race_id(self):
+        try:
+            return hex(int.from_bytes(self['RNAM'], 'little', signed=False))
+        except TypeError:
+            return None
 
     @property
     @debug_record_attribute
@@ -58,3 +66,29 @@ class Book(Record):
         self._pointer = record._pointer
         self._header = record._header
         self._content = record.content
+
+class Race(Record):
+    def __init__(self, record):
+        self._pointer = record._pointer
+        self._header = record._header
+        self._content = record.content
+
+    @property
+    def male_height(self):
+        return struct.unpack('f', self['DATA'][16:20])[0]
+
+    @property
+    def female_height(self):
+        return struct.unpack('f', self['DATA'][20:24])[0]
+
+    @property
+    def male_weight(self):
+        return struct.unpack('f', self['DATA'][24:28])[0]
+
+    @property
+    def female_weight(self):
+        return struct.unpack('f', self['DATA'][28:32])[0]
+
+    @property
+    def is_playable(self):
+        return self._get_bit(self['DATA'][32:36], 0)
