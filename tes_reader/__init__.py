@@ -42,6 +42,33 @@ def debug_record_attribute(func):
     return func_with_debug
 
 
+class FormId:
+    def __init__(self, byte):
+        if not isinstance(byte, bytes) or len(byte) not in {3, 4}:
+            raise ValueError("Form IDs have to be 3 or 4-bytes.")
+        self._bytes = byte
+
+    def __getitem__(self, key):
+        return self._bytes[key]
+
+    def __int__(self):
+        if len(self) == 3:
+            return int.from_bytes(self._bytes, 'little', signed=False)
+        else:
+            return int.from_bytes(self._bytes[:-1], 'little', signed=False)
+
+    def __str__(self):
+        return str(hex(int(self)))
+
+    def __len__(self):
+        return len(self._bytes)
+
+    @property
+    def modindex(self):
+        if len(self) == 4:
+            return self[-1]
+
+
 class Field:
     header_size = 6
 
