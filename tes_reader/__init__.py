@@ -187,7 +187,7 @@ class Record:
         if isinstance(key, str):
             for field in self:
                 if field.name == key:
-                    return field._bytes
+                    yield field._bytes
 
     def _parse_subrecords_in_group(self, group):
         starting_position = group.pointer + group.header_size
@@ -320,7 +320,8 @@ class Record:
 
     @property
     def editor_id(self):
-        return self['EDID'].decode('utf-8').strip('\0')
+        for editor_id in self['EDID']:
+            return editor_id.decode('utf-8').strip('\0')
 
 
 class Reader:
