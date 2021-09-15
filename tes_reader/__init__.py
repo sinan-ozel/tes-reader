@@ -359,6 +359,12 @@ class ElderScrollsFileReader(Reader):
         except AssertionError:
             raise RuntimeError('Incorrect file header - is this a TES4 file?')
         self._read_all_record_headers()
+        self.load_record_content(self['TES4'][0])
+        self.tes4record = self['TES4'][0]
+        self.masters = []
+        if self.tes4record['MAST'] is not None:
+            for master in self.tes4record['MAST']:
+                self.masters += [master.decode('utf-8').strip('\0')]
         return self
 
     def __exit__(self, exception_type, exception_val, trace):
