@@ -113,4 +113,14 @@ class Race(Record):
 
     @property
     def is_playable(self):
-        return self._get_bit(self['DATA'][32:36], 0)
+        return self._get_bit(self.data[32:36], 0)
+
+class CharacterClass(Record):
+    """A class to represent CLAS type records.
+
+    These records contain information about character classes."""
+    def __init__(self, record):
+        self._pointer = record._pointer
+        self._header = record._header
+        self._content = record.content
+
