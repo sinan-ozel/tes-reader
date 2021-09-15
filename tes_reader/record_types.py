@@ -2,6 +2,9 @@ import struct
 from . import Record, debug_record_attribute
 
 class NPC(Record):
+    """A class to represent NPC_ type records.
+
+    These records contain information about non-player characters (NPCs)."""
     def __init__(self, record):
         self._pointer = record._pointer
         self._header = record._header
@@ -62,12 +65,18 @@ class NPC(Record):
 
 
 class Book(Record):
+    """A class to represent BOOK type records.
+
+    These records contain information about books."""
     def __init__(self, record):
         self._pointer = record._pointer
         self._header = record._header
         self._content = record.content
 
 class Race(Record):
+    """A class to represent RACE type records.
+
+    These records contain information about character races."""
     def __init__(self, record):
         self._pointer = record._pointer
         self._header = record._header

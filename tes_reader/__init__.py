@@ -307,7 +307,7 @@ class Reader:
         return self._file.read(length)
 
 class ElderScrollsFileReader(Reader):
-    """Parse a ESM/P or ESS file.
+    """Parse a ESM/P/L file.
 
     Usage examples:
 
