@@ -172,6 +172,8 @@ class Group:
 class Record:
     header_size = 24
 
+    # TODO: Add functions for each data type: _get_int, _get_uint, _get_float
+
     def __init__(self, pointer: int, header: bytes):
         cls = self.__class__
         if type(header) != bytes or len(header) != 24:
@@ -378,6 +380,8 @@ class ElderScrollsFileReader(Reader):
         if self.tes4record['MAST'] is not None:
             for master in self.tes4record['MAST']:
                 self.masters += [master.decode('utf-8').strip('\0')]
+        # TODO: Add CNAM and SNAM - Author & Description.
+        # TOOD: Add the ESL bit, record count, group count and version.
         return self
 
     def __exit__(self, exception_type, exception_val, trace):
