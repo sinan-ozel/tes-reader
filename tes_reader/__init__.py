@@ -101,7 +101,7 @@ class Field:
         return int.from_bytes(content[4:6], 'little', signed=False)
 
     def __str__(self):
-        return self._bytes.decode('utf-8')
+        return self._bytes.decode('utf-8').strip('\0')
 
     def __int__(self):
         return int.from_bytes(self._bytes, 'little', signed=False)
