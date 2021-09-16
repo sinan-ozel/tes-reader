@@ -52,6 +52,10 @@ class NPC(Record):
         return self._get_bit(self.acbs, 5)
 
     @property
+    def is_levelling_up_with_pc(self):
+        return self._get_bit(self.acbs, 7)
+
+    @property
     def is_protected(self):
         return self._get_bit(self.acbs, 11)
 
@@ -70,6 +74,10 @@ class NPC(Record):
     @property
     def is_invulnerable(self):
         return self._get_bit(self.acbs, 31)
+
+    @property
+    def level(self):
+        return int.from_bytes(self.acbs[8:10], 'little', signed=False)
 
 
 class Book(Record):
