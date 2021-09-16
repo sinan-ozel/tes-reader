@@ -43,16 +43,29 @@ def debug_record_attribute(func):
 
 
 class FormId:
+    # TODO: Implement __index__
+    # TODO: Implement __hex__
+    # TODO: Implement __format__
     def __init__(self, byte):
-        if not isinstance(byte, bytes) or len(byte) not in {3, 4}:
-            raise ValueError("Form IDs have to be 3 or 4-bytes.")
-        self._bytes = byte
+        if not isinstance(byte, (bytes, str)):
+            raise ValueError("Use a string or byte object to instantiate a Form ID.")
+        if isinstance(byte, str):
+            if byte[:2] != '0x':
+                raise ValueError("When creating a Form ID with a string, use a hexadecimal value. For examle: FormId('0x13bab')")
+            if len(byte) > 8:
+                self._bytes = int(byte, 16).to_bytes(4, byteorder='little')
+            else:
+                self._bytes = int(byte, 16).to_bytes(3, byteorder='little')
+        else:
+            if len(byte) not in {3, 4}:
+                raise ValueError("Form IDs have to have the length 3 or 4 bytes.")
+            self._bytes = byte
 
     def __getitem__(self, key):
         return self._bytes[key]
 
     def __int__(self):
-        if len(self) == 3:
+        if len(self) < 4:
             return int.from_bytes(self._bytes, 'little', signed=False)
         else:
             return int.from_bytes(self._bytes[:-1], 'little', signed=False)
