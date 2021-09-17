@@ -497,13 +497,26 @@ class ElderScrollsFileReader(Reader):
 
 class BethesdaSoftwareArchiveReader(Reader):
     """Parse a v104/105 (Skyrim) BSA File."""
+    class Folder:
+        pass  # placeholder
+
+    class File:
+        pass  # placeholder
+
+
     def __enter__(self):
         self._file = open(self.file_path, 'rb')
         try:
             assert self._read_bytes(0, 4) == b'BSA\x00'
         except AssertionError:
             raise RuntimeError('Incorrect file header - is this a BSA file?')
-        # TODO: Read all folders
+
+        if self.version == 104:
+            self.folder_record_length = 16
+        elif self.version == 105:
+            self.folder_record_length = 24
+        else:
+            raise RuntimeError(f'Unknown BSA file version: {self.version}')
         # TODO: Read all filenames
         # TODO: Add __len__
         # TODO: Add __contains__
@@ -522,6 +535,90 @@ class BethesdaSoftwareArchiveReader(Reader):
         else:
             raise KeyError
 
+    @staticmethod
+    def _get_bit(longword: bytes, bit: int):
+        try:
+            return bool(int.from_bytes(longword, 'little', signed=False) & 2 ** bit)
+        except TypeError:
+            if longword is None:
+                return None
+
+    def _get_folder_by_index(self, idx):
+        _pos = self.offset + idx * self.folder_record_length
+        _bytes = self[_pos:_pos + self.folder_record_length]
+        _pos_for_offset = 16 if self.version >= 105 else 12
+        return {
+            'hash': _bytes[0:8],
+            'file_count': int.from_bytes(_bytes[8:12], 'little', signed=False),
+            'offset': int.from_bytes(_bytes[_pos_for_offset:_pos_for_offset + 4], 'little', signed=False),
+        }
+
+    def _get_folder_name_by_index(self, idx):
+        offset = self._get_folder_by_index(idx)['offset']
+        return self._read_string(offset - self.total_file_name_length + 1)
+
+    def _read_file_record_by_index(self, folder_idx, file_idx):
+        # Placeholder
+        return {
+            'hash': '',
+            'size': 0,
+            'offset': 0,
+        }
+
+    @property
+    def folders(self):
+        folders = [{}] * self.folder_count
+        for idx in range(self.folder_count):
+            folders[idx] = self._get_folder_by_index(idx)
+        return folders
+
+    @property
+    def folder_names(self):
+        folders = [{}] * self.folder_count
+        for idx in range(self.folder_count):
+            folders[idx] = self._get_folder_name_by_index(idx).lower()
+        return folders
+
+    @staticmethod
+    def _get_hash(folder_path):
+        pass  # Placeholder
+
+
+    @staticmethod
+    def _get_folder_by_hash(folder_path):
+        pass  # Placeholder
+
+
+
     @property
     def version(self):
         return int.from_bytes(self[4:8], 'little', signed=False)
+
+    @property
+    def offset(self):
+        return int.from_bytes(self[8:12], 'little', signed=False)
+
+    @property
+    def folder_count(self):
+        return int.from_bytes(self[16:20], 'little', signed=False)
+
+    @property
+    def file_count(self):
+        return int.from_bytes(self[20:24], 'little', signed=False)
+
+    @property
+    def total_folder_name_length(self):
+        return int.from_bytes(self[24:28], 'little', signed=False)
+
+    @property
+    def total_file_name_length(self):
+        return int.from_bytes(self[28:32], 'little', signed=False)
+
+    @property
+    def contains_meshes(self):
+        return self._get_bit(self[30:32], 0)
+
+    @property
+    def contains_textures(self):
+        return self._get_bit(self[30:32], 1)
+
