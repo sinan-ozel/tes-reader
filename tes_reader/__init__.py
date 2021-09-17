@@ -345,9 +345,18 @@ class Reader:
             raise FileNotFoundError
         self.file_path = file_path
 
-    def _read_bytes(self, pos: int, length: int) -> bytes:
+    def _read_bytes(self, pos: int, length: int=1) -> bytes:
         self._file.seek(pos)
         return self._file.read(length)
+
+    def _read_string(self, _pos):
+        _bytes = self._read_bytes(_pos)
+        while _bytes[-1] != 0:
+            _pos += 1
+            _bytes += self._read_bytes(_pos)
+
+        return _bytes[:-1].decode('utf-8')
+
 
 class ElderScrollsFileReader(Reader):
     """Parse a ESM/P/L file.
