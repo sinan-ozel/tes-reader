@@ -1,5 +1,5 @@
 import struct
-from . import Record, debug_record_attribute
+from . import Record, FormId, debug_record_attribute
 
 class NPC(Record):
     """A class to represent NPC_ type records.
@@ -13,12 +13,12 @@ class NPC(Record):
     @property
     def class_id(self):
         for class_field in self['CNAM']:
-            return hex(int.from_bytes(class_field, 'little', signed=False))
+            return FormId(class_field)
 
     @property
     def race_id(self):
         for race_field in self['RNAM']:
-            return hex(int.from_bytes(race_field, 'little', signed=False))
+            return FormId(race_field)
 
     @property
     def acbs(self):
@@ -77,7 +77,12 @@ class NPC(Record):
 
     @property
     def level(self):
-        return int.from_bytes(self.acbs[8:10], 'little', signed=False)
+        if self.is_levelling_up_with_pc:
+            divider = 1000
+        else:
+            divider = 1
+        return int.from_bytes(self.acbs[8:10], 'little', signed=False) / divider
+
 
 
 class Book(Record):
