@@ -44,7 +44,6 @@ def debug_record_attribute(func):
 
 class FormId:
     # TODO: Implement __index__
-    # TODO: Implement __hex__
     # TODO: Implement __format__
     def __init__(self, byte):
         if not isinstance(byte, (bytes, str)):
@@ -57,32 +56,39 @@ class FormId:
             else:
                 self._bytes = int(byte, 16).to_bytes(3, byteorder='little')
         else:
-            if len(byte) not in {3, 4}:
-                raise ValueError("Form IDs have to have the length 3 or 4 bytes.")
+            if not len(byte) <= 4:
+                raise ValueError("Form IDs have to have the length 4 bytes or less.")
             self._bytes = byte
 
     def __getitem__(self, key):
         return self._bytes[key]
 
     def __int__(self):
-        if len(self) < 4:
-            return int.from_bytes(self._bytes, 'little', signed=False)
-        else:
-            return int.from_bytes(self._bytes[:-1], 'little', signed=False)
+        return int.from_bytes(self._bytes, 'little', signed=False)
+
+    def __index__(self):
+        return int.from_bytes(self._bytes, 'little', signed=False)
 
     def __hex__(self):
-        return hex(int(self))
+        return hex(int.from_bytes(self._bytes, 'little', signed=False))
 
     def __str__(self):
-        return str(hex(int(self)))
+        return str(hex(int.from_bytes(self._bytes, 'little', signed=False)))
 
     def __len__(self):
         return len(self._bytes)
 
     @property
-    def modindex(self):
+    def modindex(self) -> bytes:
         if len(self) == 4:
             return self[-1]
+
+    @property
+    def objectindex(self):
+        if len(self) == 4:
+            return FormId(self[:-1])
+        else:
+            return self
 
 
 class Field:
