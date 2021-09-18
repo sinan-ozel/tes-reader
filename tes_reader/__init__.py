@@ -70,6 +70,9 @@ class FormId:
         else:
             return int.from_bytes(self._bytes[:-1], 'little', signed=False)
 
+    def __hex__(self):
+        return hex(int(self))
+
     def __str__(self):
         return str(hex(int(self)))
 
@@ -217,7 +220,7 @@ class Record:
                 self._parse_subrecords_in_group(subgroup)
                 _pos += subgroup.size
             else:
-                self.fie[int(record.form_id, 16)] = record
+                self.file[int(record.form_id)] = record
                 if not is_type(record.type):
                     print(f'Weird record type: {record.type}')
                     break
@@ -306,7 +309,7 @@ class Record:
     @property
     def form_id(self):
         if self.type != 'GRUP':
-            return hex(int.from_bytes(self._header[12:16], 'little', signed=False))
+            return FormId(self._header[12:16])
 
     @property
     def timestamp(self):
@@ -405,7 +408,7 @@ class ElderScrollsFileReader(Reader):
         elif isinstance(key, int):
             return self.records[key]
         elif isinstance(key, Record):
-            return self.records[int(key.form_id, 16)]
+            return self.records[int(key.form_id)]
         elif isinstance(key, str):
             if len(key) == 4:
                 return [record for record in self.records.values() if record.type == key]
@@ -448,7 +451,7 @@ class ElderScrollsFileReader(Reader):
                 self._read_record_headers_in_group(_pos + group.header_size, group.size - group.header_size)
                 _pos += group.size
             else:
-                self.records[int(record.form_id, 16)] = record
+                self.records[int(record.form_id)] = record
                 if not is_type(record.type):
                     print(f'Weird record type: {record.type}')
                     break
@@ -474,7 +477,7 @@ class ElderScrollsFileReader(Reader):
                 self._read_record_headers_in_group(record_position + group.header_size, group.size - group.header_size)
                 record_position += group.size
             else:
-                self.records[int(record.form_id, 16)] = record
+                self.records[int(record.form_id)] = record
                 record_position += record.header_size + record.size
 
     def get_record_content(self, record: Union[str, int, Record]) -> bytes:

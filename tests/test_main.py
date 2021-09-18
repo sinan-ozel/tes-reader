@@ -38,17 +38,17 @@ def test_access_records_by_type(test_file):
     print(f"NPC Count: {len(test_file['NPC_'])}")
     assert len(test_file['NPC_']) > 5000
     for npc_record in test_file['NPC_']:
-        assert npc_record.form_id.startswith('0x')
+        assert npc_record.form_id.modindex == 0
 
 @pytest.mark.depends(on=['test_open_file'])
 def test_access_record_by_form_id_as_string(test_file):
     form_id = '0x13bab'  # Ysolda
-    assert test_file[form_id].form_id == form_id
+    assert str(test_file[form_id].form_id) == form_id
 
 @pytest.mark.depends(on=['test_open_file'])
 def test_access_record_by_form_id_as_integer(test_file):
     form_id = int('0x13bab', 16)  # Ysolda
-    assert test_file[form_id].form_id == hex(form_id)
+    assert int(test_file[form_id].form_id) == form_id
 
 @pytest.mark.depends(on=['test_open_file'])
 def test_load_npc_record_content(test_file):
