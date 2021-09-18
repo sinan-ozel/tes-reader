@@ -506,12 +506,8 @@ class ElderScrollsFileReader(Reader):
 
 class BethesdaSoftwareArchiveReader(Reader):
     """Parse a v104/105 (Skyrim) BSA File."""
-    class Folder:
-        pass  # placeholder
 
-    class File:
-        pass  # placeholder
-
+    file_record_length = 16
 
     def __enter__(self):
         self._file = open(self.file_path, 'rb')
@@ -566,13 +562,28 @@ class BethesdaSoftwareArchiveReader(Reader):
         offset = self._get_folder_by_index(idx)['offset']
         return self._read_string(offset - self.total_file_name_length + 1)
 
+    def _get_files_in_folder_by_index(self, folder_idx):
+        folder_record = self._get_folder_by_index(folder_idx)
+        offset = folder_record['offset']
+        file_count = folder_record['file_count']
+        for file_idx in range(file_count):
+            yield self._read_file_record_by_index(folder_idx, file_idx)
+
     def _read_file_record_by_index(self, folder_idx, file_idx):
-        # Placeholder
+        folder_offset = self._get_folder_by_index(folder_idx)['offset']
+        folder_name = self._read_string(folder_offset - self.total_file_name_length + 1)
+        file_offset = folder_offset + len(folder_name) + file_idx * self.file_record_length
+        _bytes = self[file_offset:file_offset + self.file_record_length]
         return {
-            'hash': '',
-            'size': 0,
-            'offset': 0,
+            'hash': _bytes[0:8],
+            'size': int.from_bytes(_bytes[8:12], 'little', signed=False),
+            'offset': int.from_bytes(_bytes[12:16], 'little', signed=False),
         }
+
+    def _read_file_name_by_index(self, folder_idx, file_idx):
+        file_record = self._read_file_record_by_index(folder_idx, file_idx)
+        file_name = self._read_string(file_record['offset'])
+        return file_name
 
     @property
     def folders(self):
@@ -589,8 +600,33 @@ class BethesdaSoftwareArchiveReader(Reader):
         return folders
 
     @staticmethod
-    def _get_hash(folder_path):
-        pass  # Placeholder
+    def _get_hash(path):
+        """Returns tes4's two hash values for filename.
+
+        Based on the code found at: https://en.uesp.net/wiki/Oblivion_Mod:Hash_Calculation
+
+        In turn, based on TimeSlips code with cleanup and pythonization.
+        """
+        path = path.lower()
+        path = path.strip('\\')
+        ext = '.' + path.lower().split('.')[-1]
+        base = path[:-len(ext)]
+
+        chars = [ord(char) for char in base]
+        print(chars)
+        hash1 = chars[-1] | chars[-2] if len(chars) > 2 else 0 << 8 | len(chars) << 16 | chars[0] << 24
+        hash1 |= {'.kf': 0x80, '.nif': 0x8000, '.dds': 0x8080, '.wav': 0x80000000}[ext]
+
+        uint, hash2, hash3 = 0xffffffff, 0 , 0
+        for char in chars[1:-2]:
+            hash2 = ((hash2 * 0x1003F) + char ) & uint
+
+        for char in ext:
+            hash3 = ((hash3 * 0x1003F) + ord(char)) & uint
+
+        hash2 = (hash2 + hash3) & uint
+
+        return bytes((hash2<<32) + hash1)
 
 
     @staticmethod
@@ -630,4 +666,35 @@ class BethesdaSoftwareArchiveReader(Reader):
     @property
     def contains_textures(self):
         return self._get_bit(self[30:32], 1)
+
+
+class BethesdaSoftwareArchiveFolder(BethesdaSoftwareArchiveReader):
+    def __init__(self, file_path, folder_name):
+        super().__init__(file_path)
+        self.folder_name = folder_name
+
+    def __enter__(self):
+        super().__enter__()
+        try:
+            self.idx = self.folder_names.index(self.folder_name)
+        except ValueError:
+            raise FileNotFoundError
+        self.folder = self.folders[self.idx]
+
+    def __exit__(self, exception_type, exception_val, trace):
+        super().__exit__(exception_type, exception_val, trace)
+
+    def __len__(self):
+        return self.folder['file_count']
+
+class BethesdaSoftwareArchiveFile(BethesdaSoftwareArchiveFolder):
+    def __init__(self, file_path, folder_name, file_name):
+        super().__init__(file_path, folder_name)
+        self.file_name = file_name
+
+    def __enter__(self):
+        super().__enter__()
+
+    def __exit__(self, exception_type, exception_val, trace):
+        super().__exit__(exception_type, exception_val, trace)
 

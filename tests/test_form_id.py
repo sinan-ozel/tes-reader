@@ -33,4 +33,3 @@ def test_form_id_for_ysolda():
     assert len(form_id) == 4
     assert str(form_id) == '0x13bab'
     assert str(form_id.objectindex) == '0x13bab'
-
