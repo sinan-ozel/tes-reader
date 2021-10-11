@@ -553,13 +553,13 @@ class BethesdaSoftwareArchiveReader(Reader):
         _bytes = self[_pos:_pos + self.folder_record_length]
         _pos_for_offset = 16 if self.version >= 105 else 12
         return {
-            'hash': _bytes[0:8],
+            'hash': int.from_bytes(_bytes[0:8], 'little', signed=False),
             'file_count': int.from_bytes(_bytes[8:12], 'little', signed=False),
             'offset': int.from_bytes(_bytes[_pos_for_offset:_pos_for_offset + 4], 'little', signed=False),
         }
 
     def _get_folder_name_by_index(self, idx):
-        offset = self._get_folder_by_index(idx)['offset']
+        offset = self._get_folder_record_by_index(idx)['offset']
         return self._read_string(offset - self.total_file_name_length + 1)
 
     def _get_files_in_folder_by_index(self, folder_idx):
@@ -600,22 +600,26 @@ class BethesdaSoftwareArchiveReader(Reader):
         return folders
 
     @staticmethod
-    def _get_hash(path):
+    def _calculate_hash(path):
         """Returns tes4's two hash values for filename.
 
         Based on the code found at: https://en.uesp.net/wiki/Oblivion_Mod:Hash_Calculation
 
         In turn, based on TimeSlips code with cleanup and pythonization.
         """
+        extensions = {'.kf': 0x80, '.nif': 0x8000, '.dds': 0x8080, '.wav': 0x80000000}
         path = path.lower()
-        path = path.strip('\\')
-        ext = '.' + path.lower().split('.')[-1]
-        base = path[:-len(ext)]
+        if any([path.endswith(ext) for ext in extensions]):
+            ext = '.' + path.lower().split('.')[-1]
+            base = path[:-len(ext)]
+        else:
+            ext = ''
+            base = path
 
-        chars = [ord(char) for char in base]
-        print(chars)
-        hash1 = chars[-1] | chars[-2] if len(chars) > 2 else 0 << 8 | len(chars) << 16 | chars[0] << 24
-        hash1 |= {'.kf': 0x80, '.nif': 0x8000, '.dds': 0x8080, '.wav': 0x80000000}[ext]
+        chars = list(map(ord, base))
+        hash1 = chars[-1] | (chars[-2] if len(chars) > 2 else 0) << 8 | len(chars) << 16 | chars[0] << 24
+        if ext in extensions:
+            hash1 |= extensions[ext]
 
         uint, hash2, hash3 = 0xffffffff, 0 , 0
         for char in chars[1:-2]:
@@ -626,7 +630,7 @@ class BethesdaSoftwareArchiveReader(Reader):
 
         hash2 = (hash2 + hash3) & uint
 
-        return bytes((hash2<<32) + hash1)
+        return (hash2<<32) + hash1
 
 
     @staticmethod

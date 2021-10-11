@@ -25,3 +25,14 @@ def test_bsa_version(test_file):
     print('BSA Version:', test_file.version)
     assert test_file.version == 105
 
+
+def test_calculate_hash():
+    file_name = 'Strings'
+    assert BethesdaSoftwareArchiveReader._calculate_hash(file_name) == 5594201102607673203
+
+    file_name = 'interface\\controls\\orbis'
+    assert BethesdaSoftwareArchiveReader._calculate_hash(file_name) == 17048172040925243763
+
+    file_name = 'meshes\\creationclub\\_shared\\dungeons\\root'
+    assert BethesdaSoftwareArchiveReader._calculate_hash(file_name) == 16813576048203100020
+
