@@ -4,10 +4,11 @@ from tes_reader import FormId
 
 def test_form_id_basic():
     form_id = FormId(b'\x07\x00\x00\x01')
+    assert len(form_id.objectindex) == 3  # needs to be always true
     assert form_id.modindex == 1
     assert len(form_id) == 4
-    assert str(form_id) == '0x7'
-    assert str(form_id.objectindex) == '0x7'
+    assert str(form_id) == '0x1000007'
+    assert form_id.objectindex == FormId(b'\x07\x00\x00')
 
 def test_form_id_from_string():
     form_id = FormId('0x7')

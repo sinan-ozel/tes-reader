@@ -78,15 +78,19 @@ class FormId:
     def __len__(self):
         return len(self._bytes)
 
+    def __eq__(self, other):
+        if isinstance(other, FormId):
+            return self._bytes == other._bytes
+
     @property
     def modindex(self) -> bytes:
         if len(self) == 4:
-            return self[-1]
+            return self._bytes[-1]
 
     @property
     def objectindex(self):
         if len(self) == 4:
-            return FormId(self[:-1])
+            return FormId(self._bytes[:-1])
         else:
             return self
 
@@ -217,7 +221,6 @@ class Record:
         starting_position = group.pointer + group.header_size
         ending_position = starting_position + group.size - group.header_size
         _pos = starting_position
-        print("Parsing subrecords.")
         while _pos < ending_position:
             record_header = self.content[_pos:_pos + Record.header_size]
             record = Record(_pos, record_header)
@@ -323,13 +326,8 @@ class Record:
         return int.from_bytes(self._header[16:18], 'little', signed=False)
 
     def set_content(self, content: bytes):
-        # if hasattr(self, '_content'):
-        #     raise RuntimeError(f'Cannot run set_content more than once on the same {self.__class__.__name__}.')
         if not self.is_compressed:
             assert len(content) == self.size
-        # print(content[0:4].decode('utf-8'))
-        # if re.match("[A-Z0-9_]{4}", content[0:4].decode('utf-8')):
-        #     raise ValueError('Content should start with four uppercase letters or underscore.')
         self._content = content
 
     def get_content(self):
@@ -364,7 +362,10 @@ class Reader:
             _pos += 1
             _bytes += self._read_bytes(_pos)
 
-        return _bytes[:-1].decode('utf-8')
+        try:
+            return _bytes[:-1].decode('utf-8')
+        except UnicodeDecodeError:
+            return _bytes[:-1].decode('latin-1')
 
 
 class ElderScrollsFileReader(Reader):
@@ -509,6 +510,49 @@ class BethesdaSoftwareArchiveReader(Reader):
 
     file_record_length = 16
 
+    class Folder:
+        def __init__(self, folder_index, folder_name, folder_record):
+            folder_hash = BethesdaSoftwareArchiveReader._calculate_hash(folder_name)
+            if folder_hash != folder_record['hash']:
+                raise ValueError(f'Folder name {folder_name} resolves to the hash {folder_hash}, '
+                                 f'but the hash in the folder record is {folder_record["hash"]}')
+            self.name = folder_name
+            self.index = folder_index
+            self._hash = folder_record['hash']
+            self._file_count = folder_record['file_count']
+            self._offset = folder_record['offset']
+
+        def __len__(self):
+            return self._file_count
+
+        def __repr__(self):
+            return {
+                'hash': self._hash,
+                'file_count': self._file_count,
+                'offset': self._offset
+            }
+
+        def __int__(self):
+            return self._hash
+
+        def __str__(self):
+            return self.name
+
+        def __iter__(self):
+            for file_name in self._file_names:
+                yield file_name
+
+        # TODO: __contains__
+        # TODO: __getitem__
+
+        @property
+        def record(self):
+            return {
+                'hash': self._hash,
+                'file_count': self._file_count,
+                'offset': self._offset
+            }
+
     def __enter__(self):
         self._file = open(self.file_path, 'rb')
         try:
@@ -522,9 +566,12 @@ class BethesdaSoftwareArchiveReader(Reader):
             self.folder_record_length = 24
         else:
             raise RuntimeError(f'Unknown BSA file version: {self.version}')
+        self._load_folder_records()
+        self._load_folder_filenames()
         # TODO: Read all filenames
         # TODO: Add __len__
         # TODO: Add __contains__
+        # TODO: Add __iter__ ?
         return self
 
     def __exit__(self, exception_type, exception_val, trace):
@@ -536,9 +583,61 @@ class BethesdaSoftwareArchiveReader(Reader):
                 raise KeyError(f'{self.__class__.__name__} does not allow slicing '
                                 'with a step. Use only one colon in slice, for example: [0:4]')
             return self._read_bytes(key.start, key.stop - key.start)
+        elif isinstance(key, str):
+            return self._get_folder(key)
+        elif isinstance(key, int):
+            return self._get_folder_by_hash(key)
         # TODO: Add string keys to refer to specific filenames.
         else:
             raise KeyError
+
+    def __contains__(self, key):
+        if isinstance(key, int):
+            return key in self._folders
+        elif isinstance(key, str):
+            hash = self._calculate_hash(key)
+            return hash in self._folders
+            # TODO: Add files and full paths.
+        else:
+            raise NotImplementedError
+
+    def _load_folder_records(self):
+        self._folders = {}
+        for idx in range(self.folder_count):
+            folder_name = self._get_folder_name_by_index(idx)
+            folder_record = self._get_folder_record_by_index(idx)
+            self._folders[folder_record['hash']] = self.Folder(idx, folder_name, folder_record)
+
+    def _load_folder_filenames(self):
+        file_names = self._get_file_names()
+        self._folder_filenames = {}
+        i = 0
+        for folder_hash in self._folders:
+            self._folders[folder_hash]._file_names = []
+            while len(self._folders[folder_hash]._file_names) < self._folders[folder_hash]._file_count:
+                self._folders[folder_hash]._file_names += [file_names[i]]
+                i += 1
+        if i != len(file_names):
+            raise RuntimeError(f"Following files are not in a folder: {file_names[i:]}")
+
+    def _get_file_index(self, folder_name, file_name):
+        folder_hash = self._calculate_hash(folder_name)
+        try:
+            return self._folders[folder_hash]._file_names.index(file_name.lower())
+        except ValueError:
+            return None
+
+    def _read_file_by_name(self, folder_name, file_name):
+        file_record = self._get_file_record_by_name(folder_name, file_name)
+        file_offset = file_record['offset']
+        file_size = file_record['size']
+        print(self[file_offset - 12:file_offset], self[file_offset:file_offset + 12])
+        if self.are_file_names_embedded:
+            raise NotImplementedError
+        if file_record['is_compressed']:
+            raise NotImplementedError
+        return self[file_offset:file_offset + file_size]
+
 
     @staticmethod
     def _get_bit(longword: bytes, bit: int):
@@ -548,7 +647,7 @@ class BethesdaSoftwareArchiveReader(Reader):
             if longword is None:
                 return None
 
-    def _get_folder_by_index(self, idx):
+    def _get_folder_record_by_index(self, idx):
         _pos = self.offset + idx * self.folder_record_length
         _bytes = self[_pos:_pos + self.folder_record_length]
         _pos_for_offset = 16 if self.version >= 105 else 12
@@ -562,42 +661,68 @@ class BethesdaSoftwareArchiveReader(Reader):
         offset = self._get_folder_record_by_index(idx)['offset']
         return self._read_string(offset - self.total_file_name_length + 1)
 
-    def _get_files_in_folder_by_index(self, folder_idx):
-        folder_record = self._get_folder_by_index(folder_idx)
-        offset = folder_record['offset']
-        file_count = folder_record['file_count']
-        for file_idx in range(file_count):
-            yield self._read_file_record_by_index(folder_idx, file_idx)
+    def _get_file_names(self):
+        last_folder_index = self.folder_count - 1
+        last_folder_offset = self._get_folder_record_by_index(last_folder_index)['offset']
+        last_folder_file_count = self._get_folder_record_by_index(last_folder_index)['file_count']
+        file_count = 0
+        for idx in range(self.folder_count):
+            file_count += self._get_folder_record_by_index(idx)['file_count']
+        last_folder_name = self._read_string(last_folder_offset - self.total_file_name_length + 1)
+        file_name_list_offset = last_folder_offset - self.total_file_name_length + 1 + len(last_folder_name) + 1 + last_folder_file_count * self.file_record_length
+        file_names = []
+        while len(file_names) < file_count:
+            file_name = self._read_string(file_name_list_offset)
+            file_name_list_offset += len(file_name) + 1
+            file_names += [file_name]
+        if len(file_names) != self.file_count:
+            raise RuntimeError(f"File count in the header is {self.file_count} but the list of file names is {len(file_names)}")
+        return file_names
+
+    # def _get_files_in_folder_by_index(self, folder_idx):
+    #     folder_record = self._get_folder_record_by_index(folder_idx)
+    #     file_count = folder_record['file_count']
+    #     for file_idx in range(file_count):
+    #         yield self._read_file_record_by_index(folder_idx, file_idx)
+
+    def _read_file_record_bytes(self, folder_idx):
+        folder_offset = self._get_folder_record_by_index(folder_idx)['offset']
+        folder_name = self._read_string(folder_offset - self.total_file_name_length + 1)
+        file_count = self._get_folder_record_by_index(folder_idx)['file_count']
+        file_offset = folder_offset - self.total_file_name_length + 1 + len(folder_name) + 1 + file_count * self.file_record_length
+        _bytes = self[file_offset:file_offset + self.file_record_length]
+        return _bytes
+
+    def _read_file_record_bytes_by_index(self, folder_idx, file_idx):
+        folder_offset = self._get_folder_record_by_index(folder_idx)['offset']
+        folder_name = self._read_string(folder_offset - self.total_file_name_length + 1)
+        file_offset = folder_offset - self.total_file_name_length + 1 + len(folder_name) + 1 + file_idx * self.file_record_length
+        _bytes = self[file_offset:file_offset + self.file_record_length]
+        assert len(_bytes) == 16
+        return _bytes
 
     def _read_file_record_by_index(self, folder_idx, file_idx):
-        folder_offset = self._get_folder_by_index(folder_idx)['offset']
-        folder_name = self._read_string(folder_offset - self.total_file_name_length + 1)
-        file_offset = folder_offset + len(folder_name) + file_idx * self.file_record_length
-        _bytes = self[file_offset:file_offset + self.file_record_length]
+        _bytes = self._read_file_record_bytes_by_index(folder_idx, file_idx)
         return {
-            'hash': _bytes[0:8],
+            'hash': int.from_bytes(_bytes[0:8], 'little', signed=False),
             'size': int.from_bytes(_bytes[8:12], 'little', signed=False),
+            'is_compressed': self._get_bit(_bytes[8:12], 29) ^ self.is_compressed_by_default,
             'offset': int.from_bytes(_bytes[12:16], 'little', signed=False),
         }
 
-    def _read_file_name_by_index(self, folder_idx, file_idx):
-        file_record = self._read_file_record_by_index(folder_idx, file_idx)
-        file_name = self._read_string(file_record['offset'])
-        return file_name
+    def _get_file_record_by_name(self, folder_name, file_name):
+        folder = self[folder_name]
+        file_idx = self._get_file_index(folder_name, file_name)
+        file_record = self._read_file_record_by_index(folder.index, file_idx)
+        return file_record
 
     @property
     def folders(self):
-        folders = [{}] * self.folder_count
-        for idx in range(self.folder_count):
-            folders[idx] = self._get_folder_by_index(idx)
-        return folders
+        return list(self._folders.values())
 
     @property
     def folder_names(self):
-        folders = [{}] * self.folder_count
-        for idx in range(self.folder_count):
-            folders[idx] = self._get_folder_name_by_index(idx).lower()
-        return folders
+        return [folder.name for folder in self._folders.values()]
 
     @staticmethod
     def _calculate_hash(path):
@@ -633,10 +758,15 @@ class BethesdaSoftwareArchiveReader(Reader):
         return (hash2<<32) + hash1
 
 
-    @staticmethod
-    def _get_folder_by_hash(folder_path):
-        pass  # Placeholder
+    def _get_folder_by_hash(self, hash):
+        return self._folders.get(hash)
 
+
+    def _get_folder(self, folder_name):
+        folder_name = folder_name.lower()
+        folder_name = folder_name.strip('\\')
+        hash = self._calculate_hash(folder_name)
+        return self._get_folder_by_hash(hash)
 
 
     @property
@@ -664,6 +794,22 @@ class BethesdaSoftwareArchiveReader(Reader):
         return int.from_bytes(self[28:32], 'little', signed=False)
 
     @property
+    def has_folder_names(self):
+        return self._get_bit(self[12:16], 0)
+
+    @property
+    def has_file_names(self):
+        return self._get_bit(self[12:16], 1)
+
+    @property
+    def is_compressed_by_default(self):
+        return self._get_bit(self[12:16], 2)
+
+    @property
+    def are_file_names_embedded(self):
+        return self._get_bit(self[12:16], 8)
+
+    @property
     def contains_meshes(self):
         return self._get_bit(self[30:32], 0)
 
@@ -671,34 +817,4 @@ class BethesdaSoftwareArchiveReader(Reader):
     def contains_textures(self):
         return self._get_bit(self[30:32], 1)
 
-
-class BethesdaSoftwareArchiveFolder(BethesdaSoftwareArchiveReader):
-    def __init__(self, file_path, folder_name):
-        super().__init__(file_path)
-        self.folder_name = folder_name
-
-    def __enter__(self):
-        super().__enter__()
-        try:
-            self.idx = self.folder_names.index(self.folder_name)
-        except ValueError:
-            raise FileNotFoundError
-        self.folder = self.folders[self.idx]
-
-    def __exit__(self, exception_type, exception_val, trace):
-        super().__exit__(exception_type, exception_val, trace)
-
-    def __len__(self):
-        return self.folder['file_count']
-
-class BethesdaSoftwareArchiveFile(BethesdaSoftwareArchiveFolder):
-    def __init__(self, file_path, folder_name, file_name):
-        super().__init__(file_path, folder_name)
-        self.file_name = file_name
-
-    def __enter__(self):
-        super().__enter__()
-
-    def __exit__(self, exception_type, exception_val, trace):
-        super().__exit__(exception_type, exception_val, trace)
 
