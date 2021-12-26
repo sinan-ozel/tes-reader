@@ -10,7 +10,7 @@ config.read('test.ini')
 
 test_filename = os.path.join(config['Skyrim']['Folder'],
                              'Data',
-                             config['ESM']['File'])
+                             'Skyrim.esm')
 
 # See here for expected record counts:
 # https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format/Raw_Data
@@ -19,11 +19,6 @@ def test_open_file():
     with ElderScrollsFileReader(test_filename) as test_file:
         print('First four characters in file: ', test_file[0:4])
         assert test_file[0:4] == b'TES4'
-
-@pytest.fixture
-def test_file():
-    with ElderScrollsFileReader(test_filename) as test_file:
-        yield test_file
 
 @pytest.mark.depends(on=['test_open_file'])
 def test_record_types(test_file):

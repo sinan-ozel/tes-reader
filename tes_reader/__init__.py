@@ -386,7 +386,8 @@ class ElderScrollsFileReader(Reader):
         print(skyrim_main_file[0x1033ee])  # Return the record with the form ID 0x1033ee
     """
 
-    def __enter__(self):
+    def __init__(self, file_path):
+        super().__init__(file_path)
         self._file = open(self.file_path, 'rb')
         try:
             assert self._read_bytes(0, 4) == b'TES4'
@@ -401,6 +402,8 @@ class ElderScrollsFileReader(Reader):
                 self.masters += [master.decode('utf-8').strip('\0')]
         # TODO: Add CNAM and SNAM - Author & Description.
         # TOOD: Add the ESL bit, record count, group count and version.
+
+    def __enter__(self):
         return self
 
     def __exit__(self, exception_type, exception_val, trace):
@@ -568,9 +571,7 @@ class BethesdaSoftwareArchiveReader(Reader):
             raise RuntimeError(f'Unknown BSA file version: {self.version}')
         self._load_folder_records()
         self._load_folder_filenames()
-        # TODO: Read all filenames
         # TODO: Add __len__
-        # TODO: Add __contains__
         # TODO: Add __iter__ ?
         return self
 
@@ -587,7 +588,6 @@ class BethesdaSoftwareArchiveReader(Reader):
             return self._get_folder(key)
         elif isinstance(key, int):
             return self._get_folder_by_hash(key)
-        # TODO: Add string keys to refer to specific filenames.
         else:
             raise KeyError
 
