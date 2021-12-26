@@ -351,6 +351,7 @@ class Reader:
         if not os.path.exists(file_path):
             raise FileNotFoundError
         self.file_path = file_path
+        self.file_name = os.path.basename(file_path)
 
     def _read_bytes(self, pos: int, length: int=1) -> bytes:
         self._file.seek(pos)
@@ -513,6 +514,23 @@ class BethesdaSoftwareArchiveReader(Reader):
 
     file_record_length = 16
 
+    class path:
+        @staticmethod
+        def parse(path_string):
+            return path_string.replace('/', '\\').lower()
+
+        @staticmethod
+        def join(split_path):
+            return '\\'.join(split_path)
+
+        @staticmethod
+        def is_folder(path_string):
+            return ('\\' in path_string) and ('.' in path_string)
+
+        @staticmethod
+        def is_file(path_string):
+            return not super().is_folder_path(path_string)
+
     class Folder:
         def __init__(self, folder_index, folder_name, folder_record):
             folder_hash = BethesdaSoftwareArchiveReader._calculate_hash(folder_name)
@@ -545,7 +563,12 @@ class BethesdaSoftwareArchiveReader(Reader):
             for file_name in self._file_names:
                 yield file_name
 
-        # TODO: __contains__
+        def __contains__(self, item):
+            if isinstance(item, str):
+                return item.lower() in self._file_names
+            else:
+                raise TypeError(f'BSA folder contains filenames only. Expected: string. Got: {type(item)}')
+
         # TODO: __getitem__
 
         @property
@@ -561,7 +584,7 @@ class BethesdaSoftwareArchiveReader(Reader):
         try:
             assert self._read_bytes(0, 4) == b'BSA\x00'
         except AssertionError:
-            raise RuntimeError('Incorrect file header - is this a BSA file?')
+            raise RuntimeError(f'Incorrect file header - is {self.file_path} a BSA file?')
 
         if self.version == 104:
             self.folder_record_length = 16
@@ -584,18 +607,34 @@ class BethesdaSoftwareArchiveReader(Reader):
                 raise KeyError(f'{self.__class__.__name__} does not allow slicing '
                                 'with a step. Use only one colon in slice, for example: [0:4]')
             return self._read_bytes(key.start, key.stop - key.start)
+        elif isinstance(key, tuple):
+            if len(key) >= 2 and [isinstance(key_part, str) for key_part in key]:
+                return self._read_file_by_name(self.path.parse(key[0]), self.path.parse('\\'.join(key[1:])))
+            else:
+                raise KeyError(f"{self.__class__.__name__} allows tuple of two strings to return "
+                                "a file by folder and file name. Example: ['Strings', 'Skyrim_en.dlstrings']")
         elif isinstance(key, str):
-            return self._get_folder(key)
+            if '.' in key:
+                key = key.replace('/', '\\').split('\\')
+                return self._read_file_by_name(self.path.parse(key[0]), self.path.parse('\\'.join(key[1:])))
+            else:
+                return self._get_folder(self.path.parse(key))
         elif isinstance(key, int):
             return self._get_folder_by_hash(key)
         else:
             raise KeyError
 
     def __contains__(self, key):
+        if isinstance(key, tuple):
+            if len(key) >= 2 and [isinstance(key_part, str) for key_part in key]:
+                return bool(self._get_file_index(self.path.parse(key[0]), self.path.parse('\\'.join(key[1:]))))
+            else:
+                raise KeyError(f"{self.__class__.__name__} allows tuple of two strings to return "
+                                "a file by folder and file name. Example: ['Strings', 'Skyrim_en.dlstrings']")
         if isinstance(key, int):
             return key in self._folders
         elif isinstance(key, str):
-            hash = self._calculate_hash(key)
+            hash = self._calculate_hash(self.path.parse(key))
             return hash in self._folders
             # TODO: Add files and full paths.
         else:
@@ -625,7 +664,7 @@ class BethesdaSoftwareArchiveReader(Reader):
         try:
             return self._folders[folder_hash]._file_names.index(file_name.lower())
         except ValueError:
-            return None
+            raise FileNotFoundError(f"The file `{file_name}` not found under the folder `{folder_name}` in the BSA archive: {self.file_name}.")
 
     def _read_file_by_name(self, folder_name, file_name):
         file_record = self._get_file_record_by_name(folder_name, file_name)
@@ -766,6 +805,8 @@ class BethesdaSoftwareArchiveReader(Reader):
         folder_name = folder_name.lower()
         folder_name = folder_name.strip('\\')
         hash = self._calculate_hash(folder_name)
+        if hash not in self._folders:
+            raise FileNotFoundError(f'Folder `{folder_name}` not found in the BSA archive: {self.file_name}')
         return self._get_folder_by_hash(hash)
 
 
