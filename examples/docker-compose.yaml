@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  tes-reader-examples:
+    image: tes-reader-examples
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: tes-reader-examples
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./scripts:/scripts
+      - "${SKYRIM_PATH}:/skyrim:ro"
+
+volumes:
+  scripts:
+  skyrim:
