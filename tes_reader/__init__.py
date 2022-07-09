@@ -13,7 +13,7 @@ Usage Example - Print Form IDs of all top-level NPC records in Skyrim.esm
 Credits: This code is mainly written from the YouTube stream found at https://www.youtube.com/watch?v=w5TLMn5l0g0
 and the explanation on the Wiki page: https://en.uesp.net/wiki/Skyrim_Mod:Mod_File_Format
 """
-__version__ = '0.0.8'
+__version__ = '0.1.1'
 __author__ = 'Sinan Ozel'
 
 import re
@@ -107,14 +107,21 @@ class Field:
 
     @staticmethod
     def get_name_from_content(content: bytes):
-        return content[0:4].decode('utf-8')
+        # TODO: Properly determine the correct language / codepage for a file. Remove ascii.
+        try:
+            return content[0:4].decode('utf-8')
+        except UnicodeDecodeError:
+            return content[0:4].decode('ascii')
 
     @staticmethod
     def get_size_from_content(content: bytes):
         return int.from_bytes(content[4:6], 'little', signed=False)
 
     def __str__(self):
-        return self._bytes.decode('utf-8').strip('\0')
+        try:
+            return self._bytes.decode('utf-8').strip('\0')
+        except UnicodeDecodeError:
+            return self._bytes.decode('ascii').strip('\0')
 
     def __int__(self):
         return int.from_bytes(self._bytes, 'little', signed=False)
