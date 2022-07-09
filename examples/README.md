@@ -12,7 +12,21 @@ Each script has its help file, for instance, you can run `export_books.py --help
 
 1. Install Python if you don't have it.
 2. Install TES Reader: `pip install tes-reader`
-TODO: Add the rest
+3. Go into the folder `examples/example-scripts`
+4. In this folder, run the scripts as if you would run a usual Python script, i.e. `python minimal-example.py` or `python3 minimal-example.py`. 
+
+Sample output from Git Bash:
+```
+MINGW64 /d/GitHub/tes-reader/examples/example-scripts (add-examples)
+$ python minimal-example.py
+Skyrim.esm has 821 books in it.
+```
+
+The following script will output the book contents in any mod. It doesn't really "export" them, just outputs on the screen.
+```
+MINGW64 /d/GitHub/tes-reader/examples/example-scripts (add-examples)
+$ python export-books.py "C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition\Data\Book Covers Skyrim.esp"
+```
 
 ## Running the examples inside a container
 
