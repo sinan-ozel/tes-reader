@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  tes-reader-tests:
+    image: tes-reader-tests
+    build:
+      context: ./
+      dockerfile: tests/Dockerfile
+    container_name: tes-reader-tests
+    stdin_open: true
+    tty: true
+    volumes:
+      - "${SKYRIM_PATH}:/skyrim:ro"
+
+volumes:
+  skyrim:
+    name: skyrim

@@ -15,7 +15,7 @@ with ElderScrollsFileReader(game_file_path) as elder_scrolls_file:
     print(f"Skyrim.esm has {book_count} books in it.")
 ```
 
-See [the GitHub page](https://github.com/sinan-ozel/tes-reader/blob/main/examples) 
+See [the GitHub page](https://github.com/sinan-ozel/tes-reader/blob/main/examples)
 for more examples.
 
 ## Installation
@@ -47,3 +47,15 @@ To run the tests, you will need computer with Skyrim installed. Go into the
 `tests` folder. Set the configuration in the `test.ini` file to point to the
 Skyrim's executable folder (not the data folder). Finally, run the command
 `py.test -v`, while inside the `tests` folder.
+
+Alternative, if you have docker, first creta a `.env` file that looks like
+the following:
+```
+SKYRIM_PATH=C:\Program Files (x86)\Steam\steamapps\common\Skyrim Special Edition
+```
+
+Then use the following command:
+```
+docker-compose build tes-reader-tests
+docker-compose run tes-reader-tests
+```
