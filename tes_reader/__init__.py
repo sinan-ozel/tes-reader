@@ -359,11 +359,11 @@ class Record:
     @property
     def full_name(self):
         for full_name in self['FULL']:
-			try:
-				return full_name.decode('utf-8').strip('\0')
-			except UnicodeDecodeError:
-				pass
-		return None
+            try:
+                return full_name.decode('utf-8').strip('\0')
+            except UnicodeDecodeError:
+                pass
+        return None
 
 
 class Reader:
