@@ -294,6 +294,10 @@ class Record:
     def is_esm(self):
         return self._get_flag(0)
 
+    @property
+    def is_esl(self):
+        return self._get_flag(9)
+
     def _get_flag(self, bit):
         return self._get_bit(self._header[8:12], bit)
         # return bool(int.from_bytes(self._header[8:12], 'little', signed=False) & 2 ** bit)
@@ -351,6 +355,15 @@ class Record:
     def editor_id(self):
         for editor_id in self['EDID']:
             return editor_id.decode('utf-8').strip('\0')
+
+    @property
+    def full_name(self):
+        for full_name in self['FULL']:
+			try:
+				return full_name.decode('utf-8').strip('\0')
+			except UnicodeDecodeError:
+				pass
+		return None
 
 
 class Reader:
