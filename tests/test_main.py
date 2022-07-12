@@ -55,3 +55,4 @@ def test_load_npc_record_content(test_file):
     assert isinstance(npc.content, bytes)
     assert npc.is_female == True
     assert npc.editor_id == "Ysolda"
+    assert npc.get_mesh_path_name('Skyrim.esm') == "Meshes\\Actors\\Character\\FaceGenData\\FaceGeom\\Skyrim.esm\\0000013bab.nif"

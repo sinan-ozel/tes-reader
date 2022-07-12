@@ -83,6 +83,15 @@ class NPC(Record):
             divider = 1
         return int.from_bytes(self.acbs[8:10], 'little', signed=False) / divider
 
+    def get_mesh_path_name(self, mod_file_name: str) -> str:
+        """Return the path under data for the FaceGenData mesh."""
+        return '\\'.join(['Meshes',
+                          'Actors',
+                          'Character',
+                          'FaceGenData',
+                          'FaceGeom',
+                          mod_file_name,
+                          f'00{str(self.form_id.objectindex)[2:].rjust(8, "0")}.nif'])
 
 
 class Book(Record):
