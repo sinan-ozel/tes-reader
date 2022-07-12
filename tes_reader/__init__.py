@@ -345,7 +345,7 @@ class Record:
         try:
             return self._content
         except AttributeError:
-            raise AttributeError('Record contents not loaded. Call set_content to set them.')
+            raise AttributeError('Record contents not loaded. Call load_record_content to set them.')
 
     @property
     def content(self):
