@@ -5,9 +5,6 @@ COPY tests/requirements.txt ./
 RUN pip install -r requirements.txt
 RUN rm requirements.txt
 
-WORKDIR /tes_reader
-COPY /tes_reader/*.py ./
-
 WORKDIR /tests
 COPY tests/*.py ./
 RUN echo [Skyrim] > test.ini

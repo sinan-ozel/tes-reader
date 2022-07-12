@@ -11,7 +11,10 @@ services:
     tty: true
     volumes:
       - "${SKYRIM_PATH}:/skyrim:ro"
+      - "./tes_reader:/tes_reader:ro"
 
 volumes:
   skyrim:
     name: skyrim
+  tes_reader:
+    name: tes_reader
