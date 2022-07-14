@@ -146,3 +146,17 @@ class CharacterClass(Record):
         self._header = record._header
         self._content = record.content
 
+
+class Info(Record):
+    """A class to represent INFO type records.
+
+    These records contain information about dialogue responses of Voice Types."""
+    # TODO: Add a unit test for this type of record
+    def __init__(self, record):
+        self._pointer = record._pointer
+        self._header = record._header
+        self._content = record.content
+
+    def __str__(self):
+        for content in self['NAM1']:
+            return content[:-1].decode('ascii')
