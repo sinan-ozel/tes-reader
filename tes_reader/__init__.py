@@ -81,6 +81,12 @@ class FormId:
     def __eq__(self, other):
         if isinstance(other, FormId):
             return self._bytes == other._bytes
+        elif isinstance(other, str):
+            # TODO: Add unit test.
+            if other.startswith('0x'):
+                return str(self)[2:] == other[2:].lstrip('0')
+            else:
+                return str(self)[2:] == other.lstrip('0')
 
     @property
     def modindex(self) -> bytes:
@@ -358,12 +364,9 @@ class Record:
 
     @property
     def full_name(self):
-        for full_name in self['FULL']:
-            try:
+        if 'FULL' in self:
+            for full_name in self['FULL']:
                 return full_name.decode('utf-8').strip('\0')
-            except UnicodeDecodeError:
-                pass
-        return None
 
 
 class Reader:
@@ -518,13 +521,13 @@ class ElderScrollsFileReader(Reader):
             self.load_record_content(record)
             return self[record].content
 
-    def load_record_content(self, record: Union[str, int, Record]):
+    def load_record_content(self, record: Record):
         if self[record].is_compressed:
             content = self._read_bytes(self[record]._pointer + self[record].header_size + 4, self[record].size)
             content = zlib.decompress(content, zlib.MAX_WBITS)
-            record.set_content(content)
         else:
             content = self._read_bytes(self[record]._pointer + self[record].header_size, self[record].size)
+        record.set_content(content)
         self[record].content = content
 
 

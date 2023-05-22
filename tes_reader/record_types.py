@@ -83,7 +83,11 @@ class NPC(Record):
             divider = 1
         return int.from_bytes(self.acbs[8:10], 'little', signed=False) / divider
 
-    def get_mesh_path_name(self, mod_file_name: str) -> str:
+    @property
+    def face_geom_file_name(self) -> str:
+        return f'00{str(self.form_id.objectindex)[2:].rjust(8, "0")}.nif'
+
+    def get_face_geom_path_name(self, mod_file_name: str) -> str:
         """Return the path under data for the FaceGenData mesh."""
         return '\\'.join(['Meshes',
                           'Actors',
@@ -91,7 +95,21 @@ class NPC(Record):
                           'FaceGenData',
                           'FaceGeom',
                           mod_file_name,
-                          f'00{str(self.form_id.objectindex)[2:].rjust(8, "0")}.nif'])
+                          self.face_geom_file_name])
+
+    @property
+    def face_tint_file_name(self) -> str:
+        return f'00{str(self.form_id.objectindex)[2:].rjust(8, "0")}.dds'
+
+    def get_face_tint_path_name(self, mod_file_name: str) -> str:
+        """Return the path under data for the FaceGenData mesh."""
+        return '\\'.join(['Textures',
+                          'Actors',
+                          'Character',
+                          'FaceGenData',
+                          'FaceTint',
+                          mod_file_name,
+                          self.face_geom_file_name])
 
 
 class Book(Record):
@@ -136,6 +154,7 @@ class Race(Record):
     @property
     def is_playable(self):
         return self._get_bit(self.data[32:36], 0)
+
 
 class CharacterClass(Record):
     """A class to represent CLAS type records.
