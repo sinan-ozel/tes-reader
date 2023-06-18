@@ -1,6 +1,8 @@
 # The Elder Scrolls Files Reader
 A reader for The Elder Scrolls files.
 
+UPDATE: This is no longer in developer, use [https://github.com/sinan-ozel/elder-scrolls] instead
+
 ## Minimal Example - Print the Number of Books
 ```
 import os
